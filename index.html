@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>·</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Cinzel:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     CONFIG — change this one line to update the countdown target.
+     Format: YYYY-MM-DDTHH:mm:ss (local time)
+     ========================================================= */
+  :root {
+    --target-datetime: "2026-04-21T12:00:00";
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at center, #1a1410 0%, #0a0705 70%, #050302 100%);
+    color: #e8d9b8;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Subtle parchment grain */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(180, 140, 90, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 75% 70%, rgba(140, 100, 60, 0.03) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Film grain overlay */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+  }
+
+  .stage {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 2rem;
+  }
+
+  /* =========================================================
+     GATE — the password view
+     ========================================================= */
+  #gate {
+    display: flex;
+    gap: clamp(0.75rem, 2.5vw, 1.4rem);
+  }
+
+  .cell {
+    width: clamp(3.5rem, 10vw, 5.5rem);
+    height: clamp(4.5rem, 12vw, 7rem);
+    background: linear-gradient(180deg, rgba(30, 22, 14, 0.6) 0%, rgba(20, 14, 8, 0.8) 100%);
+    border: 1px solid rgba(200, 160, 100, 0.35);
+    border-radius: 2px;
+    box-shadow:
+      inset 0 1px 0 rgba(220, 180, 120, 0.08),
+      inset 0 -2px 8px rgba(0, 0, 0, 0.4),
+      0 2px 12px rgba(0, 0, 0, 0.5);
+    color: #f4e4c1;
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 500;
+    text-align: center;
+    caret-color: transparent;
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    padding: 0;
+  }
+
+  .cell:focus {
+    border-color: rgba(230, 190, 130, 0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(220, 180, 120, 0.12),
+      inset 0 -2px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(230, 190, 130, 0.25),
+      0 0 20px rgba(200, 150, 80, 0.15);
+  }
+
+  /* Error state */
+  .cell.error {
+    animation: errorFlash 0.6s ease;
+  }
+
+  @keyframes errorFlash {
+    0%   { border-color: rgba(200, 160, 100, 0.35); background: linear-gradient(180deg, rgba(30, 22, 14, 0.6) 0%, rgba(20, 14, 8, 0.8) 100%); }
+    20%  { border-color: rgba(200, 60, 50, 0.95); background: linear-gradient(180deg, rgba(80, 20, 15, 0.7) 0%, rgba(60, 15, 10, 0.85) 100%); box-shadow: inset 0 0 12px rgba(200, 60, 40, 0.35), 0 0 20px rgba(180, 50, 30, 0.3); }
+    60%  { border-color: rgba(200, 60, 50, 0.95); background: linear-gradient(180deg, rgba(80, 20, 15, 0.7) 0%, rgba(60, 15, 10, 0.85) 100%); }
+    100% { border-color: rgba(200, 160, 100, 0.35); background: linear-gradient(180deg, rgba(30, 22, 14, 0.6) 0%, rgba(20, 14, 8, 0.8) 100%); }
+  }
+
+  /* =========================================================
+     COUNTDOWN view
+     ========================================================= */
+  #reveal {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+
+  #reveal.visible {
+    display: flex;
+    opacity: 1;
+  }
+
+  .sun-mark {
+    width: clamp(60px, 10vw, 90px);
+    height: clamp(60px, 10vw, 90px);
+    margin-bottom: 2.5rem;
+    opacity: 0.85;
+    animation: slowPulse 6s ease-in-out infinite;
+  }
+
+  @keyframes slowPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.04); }
+  }
+
+  .countdown {
+    display: flex;
+    gap: clamp(1rem, 4vw, 2.5rem);
+    font-family: 'Cinzel', serif;
+    color: #f4e4c1;
+  }
+
+  .unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: clamp(3rem, 7vw, 5rem);
+  }
+
+  .unit .value {
+    font-size: clamp(2rem, 6vw, 4rem);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(200, 150, 80, 0.2);
+  }
+
+  .unit .label {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+    letter-spacing: 0.2em;
+    text-transform: lowercase;
+    margin-top: 0.9rem;
+    color: rgba(200, 170, 120, 0.6);
+  }
+
+  .separator {
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: rgba(200, 170, 120, 0.25);
+    align-self: flex-start;
+    line-height: 1;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* =========================================================
+     FINAL MESSAGE — when countdown hits zero
+     ========================================================= */
+  .final-message {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    letter-spacing: 0.25em;
+    color: #f4e4c1;
+    text-transform: lowercase;
+    text-shadow: 0 0 30px rgba(220, 170, 90, 0.3);
+    animation: finalFade 2s ease;
+  }
+
+  @keyframes finalFade {
+    from { opacity: 0; letter-spacing: 0.5em; }
+    to   { opacity: 1; letter-spacing: 0.25em; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- PASSWORD GATE -->
+  <div class="stage" id="gate">
+    <input type="text" class="cell" maxlength="1" inputmode="text" autocomplete="off" spellcheck="false" data-index="0" autofocus />
+    <input type="text" class="cell" maxlength="1" inputmode="text" autocomplete="off" spellcheck="false" data-index="1" />
+    <input type="text" class="cell" maxlength="1" inputmode="text" autocomplete="off" spellcheck="false" data-index="2" />
+    <input type="text" class="cell" maxlength="1" inputmode="text" autocomplete="off" spellcheck="false" data-index="3" />
+    <input type="text" class="cell" maxlength="1" inputmode="text" autocomplete="off" spellcheck="false" data-index="4" />
+  </div>
+
+  <!-- COUNTDOWN / REVEAL -->
+  <div class="stage" id="reveal">
+    <div class="countdown" id="countdown">
+      <div class="unit"><span class="value" id="days">00</span><span class="label">days</span></div>
+      <span class="separator">·</span>
+      <div class="unit"><span class="value" id="hours">00</span><span class="label">hours</span></div>
+      <span class="separator">·</span>
+      <div class="unit"><span class="value" id="minutes">00</span><span class="label">minutes</span></div>
+      <span class="separator">·</span>
+      <div class="unit"><span class="value" id="seconds">00</span><span class="label">seconds</span></div>
+    </div>
+  </div>
+
+<script>
+  // =========================================================
+  // CONFIG — change this to update the countdown target datetime.
+  // Format: YYYY-MM-DDTHH:mm:ss (local time on the viewer's machine)
+  // =========================================================
+  const TARGET_DATETIME = "2026-04-21T12:00:00";
+
+  // =========================================================
+  // Password logic
+  // =========================================================
+  const PASSWORD = "ARIES";
+  const cells = document.querySelectorAll(".cell");
+  const gate = document.getElementById("gate");
+  const reveal = document.getElementById("reveal");
+
+  cells.forEach((cell, i) => {
+    // Sanitize + advance on input
+    cell.addEventListener("input", (e) => {
+      let v = cell.value.toUpperCase().replace(/[^A-Z]/g, "");
+      cell.value = v.slice(-1); // keep only last valid letter
+      if (cell.value && i < cells.length - 1) {
+        cells[i + 1].focus();
+      }
+      // Check when all 5 are filled
+      if ([...cells].every(c => c.value.length === 1)) {
+        checkPassword();
+      }
+    });
+
+    // Backspace jumps to previous cell when empty
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !cell.value && i > 0) {
+        cells[i - 1].focus();
+        cells[i - 1].value = "";
+        e.preventDefault();
+      }
+      // Left/right arrow navigation
+      if (e.key === "ArrowLeft" && i > 0) {
+        cells[i - 1].focus();
+        e.preventDefault();
+      }
+      if (e.key === "ArrowRight" && i < cells.length - 1) {
+        cells[i + 1].focus();
+        e.preventDefault();
+      }
+    });
+
+    // Paste support: if she pastes "ARIES" into any cell, distribute it
+    cell.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData("text")
+        .toUpperCase().replace(/[^A-Z]/g, "").slice(0, cells.length);
+      [...text].forEach((ch, idx) => {
+        if (cells[idx]) cells[idx].value = ch;
+      });
+      if (text.length === cells.length) {
+        checkPassword();
+      } else if (cells[text.length]) {
+        cells[text.length].focus();
+      }
+    });
+  });
+
+  function checkPassword() {
+    const entered = [...cells].map(c => c.value).join("").toUpperCase();
+    if (entered === PASSWORD) {
+      unlock();
+    } else {
+      // flash red then clear
+      cells.forEach(c => {
+        c.classList.remove("error");
+        // force reflow to restart animation
+        void c.offsetWidth;
+        c.classList.add("error");
+      });
+      setTimeout(() => {
+        cells.forEach(c => {
+          c.value = "";
+          c.classList.remove("error");
+        });
+        cells[0].focus();
+      }, 650);
+    }
+  }
+
+  function unlock() {
+    gate.style.transition = "opacity 0.8s ease";
+    gate.style.opacity = "0";
+    setTimeout(() => {
+      gate.style.display = "none";
+      reveal.classList.add("visible");
+      startCountdown();
+    }, 800);
+  }
+
+  // =========================================================
+  // Countdown logic
+  // =========================================================
+  function startCountdown() {
+    const target = new Date(TARGET_DATETIME).getTime();
+    const daysEl = document.getElementById("days");
+    const hoursEl = document.getElementById("hours");
+    const minutesEl = document.getElementById("minutes");
+    const secondsEl = document.getElementById("seconds");
+    const countdownEl = document.getElementById("countdown");
+
+    function tick() {
+      const now = Date.now();
+      const diff = target - now;
+
+      if (diff <= 0) {
+        // Replace countdown with "find us."
+        countdownEl.outerHTML = '<div class="final-message">find us.</div>';
+        clearInterval(interval);
+        return;
+      }
+
+      const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours   = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      daysEl.textContent    = String(days).padStart(2, "0");
+      hoursEl.textContent   = String(hours).padStart(2, "0");
+      minutesEl.textContent = String(minutes).padStart(2, "0");
+      secondsEl.textContent = String(seconds).padStart(2, "0");
+    }
+
+    tick();
+    const interval = setInterval(tick, 1000);
+  }
+</script>
+</body>
+</html>
